@@ -45,7 +45,7 @@ Version:        ${VERSION}
 Release:        ${RELEASE}%{?dist}
 Summary:        Screen area recorder for GNOME Wayland
 License:        MIT
-URL:            https://github.com/ProfessorCam/wpeek
+URL:            https://github.com/ProfessorCam/frame
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      noarch
 

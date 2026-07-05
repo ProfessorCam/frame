@@ -43,7 +43,7 @@ Depends: python3 (>= 3.10),
  ffmpeg
 Recommends: libnotify-bin
 Installed-Size: $(du -sk "$SCRIPT_DIR/frame" | cut -f1)
-Homepage: https://github.com/ProfessorCam/wpeek
+Homepage: https://github.com/ProfessorCam/frame
 Maintainer: Cameron Ryan <cameronaryan@gmail.com>
 Description: Peek-like screen area recorder for GNOME Wayland
  Frame is a screen area recorder for GNOME on Wayland. It records
