@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Build an RPM package for wpeek (Fedora/RHEL/DNF)
+# Build an RPM package for frame (Fedora/RHEL/DNF)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VERSION="${1:-1.1.0}"
 RELEASE="${2:-1}"
-PKG="wpeek"
+PKG="frame"
 
 echo "Building ${PKG}-${VERSION}-${RELEASE} RPM..."
 
@@ -15,11 +15,26 @@ mkdir -p "$BUILD_ROOT"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 # ── Create tarball ────────────────────────────────────────────────
 TARDIR="$BUILD_ROOT/SOURCES/${PKG}-${VERSION}"
-mkdir -p "$TARDIR/wpeek"
-cp "$SCRIPT_DIR/wpeek/__init__.py"  "$TARDIR/wpeek/"
-cp "$SCRIPT_DIR/wpeek/__main__.py"  "$TARDIR/wpeek/"
-cp "$SCRIPT_DIR/wpeek/app.py"       "$TARDIR/wpeek/"
-cp "$SCRIPT_DIR/wpeek/recorder.py"  "$TARDIR/wpeek/"
+mkdir -p "$TARDIR/frame"
+cp "$SCRIPT_DIR/frame/__init__.py"      "$TARDIR/frame/"
+cp "$SCRIPT_DIR/frame/__main__.py"      "$TARDIR/frame/"
+cp "$SCRIPT_DIR/frame/app.py"           "$TARDIR/frame/"
+cp "$SCRIPT_DIR/frame/recorder.py"      "$TARDIR/frame/"
+cp "$SCRIPT_DIR/frame/config.py"        "$TARDIR/frame/"
+cp "$SCRIPT_DIR/frame/overlay.py"       "$TARDIR/frame/"
+cp "$SCRIPT_DIR/frame/dbus_control.py"  "$TARDIR/frame/"
+cp "$SCRIPT_DIR/frame/globalshortcuts.py" "$TARDIR/frame/"
+# GNOME Shell extension
+EXT_UUID="frame@professorcam.github.io"
+mkdir -p "$TARDIR/gnome-shell-extension/$EXT_UUID"
+cp "$SCRIPT_DIR/gnome-shell-extension/$EXT_UUID"/*.json \
+   "$SCRIPT_DIR/gnome-shell-extension/$EXT_UUID"/*.js \
+   "$SCRIPT_DIR/gnome-shell-extension/$EXT_UUID"/*.css \
+   "$TARDIR/gnome-shell-extension/$EXT_UUID/"
+# Icons
+mkdir -p "$TARDIR/icons"
+cp "$SCRIPT_DIR/icons/frame-"*.png "$TARDIR/icons/"
+cp "$SCRIPT_DIR/frame.svg" "$TARDIR/"
 (cd "$BUILD_ROOT/SOURCES" && tar czf "${PKG}-${VERSION}.tar.gz" "${PKG}-${VERSION}")
 rm -rf "$TARDIR"
 
@@ -30,7 +45,7 @@ Version:        ${VERSION}
 Release:        ${RELEASE}%{?dist}
 Summary:        Screen area recorder for GNOME Wayland
 License:        MIT
-URL:            https://github.com/cryan/wpeek
+URL:            https://github.com/ProfessorCam/wpeek
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      noarch
 
@@ -42,7 +57,7 @@ Requires:       gstreamer1-plugins-base
 Requires:       gstreamer1-plugins-good
 Requires:       gstreamer1-plugins-ugly-free
 Requires:       gstreamer1-plugins-bad-free
-Requires:       gstreamer1-pipewire
+Requires:       pipewire-gstreamer
 Requires:       ffmpeg-free
 Recommends:     libnotify
 
@@ -55,30 +70,56 @@ for screen capture, with a GTK4/libadwaita UI.
 %setup -q
 
 %install
-mkdir -p %{buildroot}/usr/lib/%{name}/wpeek
-install -m 644 wpeek/__init__.py  %{buildroot}/usr/lib/%{name}/wpeek/
-install -m 644 wpeek/__main__.py  %{buildroot}/usr/lib/%{name}/wpeek/
-install -m 644 wpeek/app.py       %{buildroot}/usr/lib/%{name}/wpeek/
-install -m 644 wpeek/recorder.py  %{buildroot}/usr/lib/%{name}/wpeek/
+mkdir -p %{buildroot}/usr/lib/%{name}/frame
+install -m 644 frame/__init__.py      %{buildroot}/usr/lib/%{name}/frame/
+install -m 644 frame/__main__.py      %{buildroot}/usr/lib/%{name}/frame/
+install -m 644 frame/app.py           %{buildroot}/usr/lib/%{name}/frame/
+install -m 644 frame/recorder.py      %{buildroot}/usr/lib/%{name}/frame/
+install -m 644 frame/config.py        %{buildroot}/usr/lib/%{name}/frame/
+install -m 644 frame/overlay.py       %{buildroot}/usr/lib/%{name}/frame/
+install -m 644 frame/dbus_control.py  %{buildroot}/usr/lib/%{name}/frame/
+install -m 644 frame/globalshortcuts.py %{buildroot}/usr/lib/%{name}/frame/
+
+mkdir -p %{buildroot}/usr/share/gnome-shell/extensions/frame@professorcam.github.io
+install -m 644 gnome-shell-extension/frame@professorcam.github.io/metadata.json  %{buildroot}/usr/share/gnome-shell/extensions/frame@professorcam.github.io/
+install -m 644 gnome-shell-extension/frame@professorcam.github.io/extension.js   %{buildroot}/usr/share/gnome-shell/extensions/frame@professorcam.github.io/
+install -m 644 gnome-shell-extension/frame@professorcam.github.io/stylesheet.css %{buildroot}/usr/share/gnome-shell/extensions/frame@professorcam.github.io/
+
+mkdir -p %{buildroot}/usr/share/icons/hicolor/scalable/apps
+install -m 644 frame.svg %{buildroot}/usr/share/icons/hicolor/scalable/apps/frame.svg
+mkdir -p %{buildroot}/usr/share/icons/hicolor/16x16/apps
+install -m 644 icons/frame-16.png  %{buildroot}/usr/share/icons/hicolor/16x16/apps/frame.png
+mkdir -p %{buildroot}/usr/share/icons/hicolor/32x32/apps
+install -m 644 icons/frame-32.png  %{buildroot}/usr/share/icons/hicolor/32x32/apps/frame.png
+mkdir -p %{buildroot}/usr/share/icons/hicolor/48x48/apps
+install -m 644 icons/frame-48.png  %{buildroot}/usr/share/icons/hicolor/48x48/apps/frame.png
+mkdir -p %{buildroot}/usr/share/icons/hicolor/64x64/apps
+install -m 644 icons/frame-64.png  %{buildroot}/usr/share/icons/hicolor/64x64/apps/frame.png
+mkdir -p %{buildroot}/usr/share/icons/hicolor/128x128/apps
+install -m 644 icons/frame-128.png %{buildroot}/usr/share/icons/hicolor/128x128/apps/frame.png
+mkdir -p %{buildroot}/usr/share/icons/hicolor/256x256/apps
+install -m 644 icons/frame-256.png %{buildroot}/usr/share/icons/hicolor/256x256/apps/frame.png
+mkdir -p %{buildroot}/usr/share/icons/hicolor/512x512/apps
+install -m 644 icons/frame-512.png %{buildroot}/usr/share/icons/hicolor/512x512/apps/frame.png
 
 mkdir -p %{buildroot}/usr/bin
 cat > %{buildroot}/usr/bin/%{name} << 'LAUNCHER'
 #!/usr/bin/python3
-"""Launch wpeek."""
+"""Launch frame."""
 import sys
-sys.path.insert(0, '/usr/lib/wpeek')
-from wpeek.__main__ import main
+sys.path.insert(0, '/usr/lib/frame')
+from frame.__main__ import main
 sys.exit(main())
 LAUNCHER
 chmod 755 %{buildroot}/usr/bin/%{name}
 
 mkdir -p %{buildroot}/usr/share/applications
-cat > %{buildroot}/usr/share/applications/com.github.wpeek.desktop << 'DESKTOP'
+cat > %{buildroot}/usr/share/applications/com.github.frame.desktop << 'DESKTOP'
 [Desktop Entry]
-Name=wpeek
+Name=Frame
 Comment=Screen area recorder for GNOME Wayland
-Exec=wpeek
-Icon=video-x-generic
+Exec=frame
+Icon=frame
 Terminal=false
 Type=Application
 Categories=AudioVideo;Video;Recorder;
@@ -90,10 +131,13 @@ DESKTOP
 %files
 /usr/lib/%{name}/
 /usr/bin/%{name}
-/usr/share/applications/com.github.wpeek.desktop
+/usr/share/applications/com.github.frame.desktop
+/usr/share/gnome-shell/extensions/frame@professorcam.github.io/
+/usr/share/icons/hicolor/*/apps/frame.png
+/usr/share/icons/hicolor/scalable/apps/frame.svg
 
 %changelog
-* $(date '+%a %b %d %Y') cryan <cryan@localhost> - ${VERSION}-${RELEASE}
+* $(date '+%a %b %d %Y') Cameron Ryan <cameronaryan@gmail.com> - ${VERSION}-${RELEASE}
 - Initial RPM package
 SPEC
 
@@ -111,7 +155,7 @@ if [ -n "$RPM" ]; then
     echo "  sudo dnf install $SCRIPT_DIR/build/$BASENAME"
     echo ""
     echo "Uninstall with:"
-    echo "  sudo dnf remove wpeek"
+    echo "  sudo dnf remove frame"
 else
     echo "ERROR: rpmbuild failed — is rpm-build installed?" >&2
     echo "  sudo dnf install rpm-build" >&2

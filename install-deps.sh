@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install wpeek dependencies on Ubuntu 24.04
+# Install frame dependencies on Ubuntu 24.04
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -22,12 +22,12 @@ sudo apt install -y \
 echo ""
 echo "Installing desktop file (enables GNOME window introspection)..."
 mkdir -p ~/.local/share/applications
-cp "$SCRIPT_DIR/com.github.wpeek.desktop" ~/.local/share/applications/
+cp "$SCRIPT_DIR/com.github.frame.desktop" ~/.local/share/applications/
 update-desktop-database ~/.local/share/applications/ 2>/dev/null || true
 
 echo ""
-echo "Done!  Run wpeek with:"
-echo "  cd $SCRIPT_DIR && /usr/bin/python3 -m wpeek"
+echo "Done!  Run frame with:"
+echo "  cd $SCRIPT_DIR && /usr/bin/python3 -m frame"
 echo ""
 echo "Note: If window position detection doesn't work on first run,"
 echo "log out and back in so GNOME picks up the new desktop file."

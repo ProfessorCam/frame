@@ -1,0 +1,7 @@
+.frame-rec-icon {
+    color: #ff453a;
+}
+
+.frame-rec-icon.frame-paused {
+    color: #f5a623;
+}

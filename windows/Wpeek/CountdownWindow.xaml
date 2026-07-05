@@ -1,0 +1,17 @@
+<Window x:Class="Wpeek.CountdownWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False"
+        Topmost="True" ResizeMode="NoResize" Background="#8C000000"
+        WindowState="Maximized" Cursor="None">
+    <Grid>
+        <Border Width="200" Height="200" CornerRadius="100" Background="#D91A1A1E"
+                HorizontalAlignment="Center" VerticalAlignment="Center">
+            <TextBlock x:Name="Num" Foreground="White" FontSize="120" FontWeight="Bold"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+        <TextBlock Text="Recording starts soon  •  Esc to cancel" Foreground="#99FFFFFF"
+                   FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Margin="0,320,0,0"/>
+    </Grid>
+</Window>

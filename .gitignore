@@ -1,5 +1,4 @@
-build/appimage/
-build/wpeek_*/
+build/
 __pycache__/
 *.pyc
 *.pyo
