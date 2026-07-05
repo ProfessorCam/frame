@@ -1,0 +1,195 @@
+<Window x:Class="Wpeek.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Frame"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" SizeToContent="WidthAndHeight" Topmost="True"
+        ShowInTaskbar="True" WindowStartupLocation="CenterScreen"
+        FontFamily="Segoe UI Variable, Segoe UI" TextOptions.TextFormattingMode="Ideal">
+
+    <Window.Resources>
+        <!-- Segmented format toggle -->
+        <Style x:Key="SegBtn" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,4"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="11"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource SegmentOn}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Flat icon/text pill button -->
+        <Style x:Key="Flat" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Background" Value="#0DFFFFFF"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="12"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#1FFFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Accent (Record / Stop) -->
+        <Style x:Key="Accent" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="{StaticResource Accent}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="15"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="{StaticResource AccentHi}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Neutral" TargetType="Button" BasedOn="{StaticResource Accent}">
+            <Setter Property="Background" Value="#24FFFFFF"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="15"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="b" Property="Background" Value="#38FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <StackPanel Margin="14" HorizontalAlignment="Center">
+        <!-- ── PILL ─────────────────────────────────────────────── -->
+        <Border x:Name="Pill" CornerRadius="26" Background="{StaticResource PillBg}"
+                BorderBrush="{StaticResource PillBorder}" BorderThickness="1"
+                Padding="8,6" MouseLeftButtonDown="Pill_Drag">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="26" ShadowDepth="6" Opacity="0.5" Color="Black"/>
+            </Border.Effect>
+
+            <Grid>
+                <!-- Idle cluster -->
+                <StackPanel x:Name="IdlePanel" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Ellipse Width="13" Height="13" Margin="6,0,8,0" VerticalAlignment="Center">
+                        <Ellipse.Fill>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#FF6A5E" Offset="0"/>
+                                <GradientStop Color="#E0483D" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Ellipse.Fill>
+                    </Ellipse>
+
+                    <Border Background="{StaticResource Segment}" CornerRadius="13" Padding="2" Margin="2,0">
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton x:Name="FmtGif" Style="{StaticResource SegBtn}" Content="GIF"
+                                          Click="Fmt_Click" Tag="Gif"/>
+                            <ToggleButton x:Name="FmtMp4" Style="{StaticResource SegBtn}" Content="MP4"
+                                          Click="Fmt_Click" Tag="Mp4"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ComboBox x:Name="DelayBox" Margin="6,0,0,0" Width="92" VerticalContentAlignment="Center"
+                              SelectionChanged="Delay_Changed">
+                        <ComboBoxItem Content="No delay" Tag="0"/>
+                        <ComboBoxItem Content="3 s" Tag="3"/>
+                        <ComboBoxItem Content="5 s" Tag="5"/>
+                        <ComboBoxItem Content="10 s" Tag="10"/>
+                    </ComboBox>
+
+                    <Button x:Name="GearBtn" Style="{StaticResource Flat}" Margin="6,0,0,0"
+                            Content="⚙" FontSize="14" Click="Gear_Click"/>
+
+                    <Button x:Name="RecordBtn" Style="{StaticResource Accent}" Margin="8,0,0,0"
+                            Click="Record_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Width="9" Height="9" Fill="White" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Record" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button x:Name="CloseBtn" Style="{StaticResource Flat}" Margin="4,0,0,0"
+                            Content="✕" FontSize="12" Click="Close_Click"/>
+                </StackPanel>
+
+                <!-- Recording cluster -->
+                <StackPanel x:Name="RecPanel" Orientation="Horizontal" VerticalAlignment="Center"
+                            Visibility="Collapsed">
+                    <Ellipse x:Name="RecDot" Width="13" Height="13" Margin="6,0,8,0" Fill="#FF453A"
+                             VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TimerText" Text="0:00" Foreground="#FF453A" FontWeight="Bold"
+                               FontFamily="Consolas" FontSize="15" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock x:Name="SizeText" Text="" Foreground="{StaticResource TextMuted}"
+                               FontSize="12" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                    <Button x:Name="PauseBtn" Style="{StaticResource Neutral}" Content="Pause"
+                            Margin="0,0,8,0" Click="Pause_Click"/>
+                    <Button x:Name="StopBtn" Style="{StaticResource Accent}" Content="Stop" Click="Stop_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ── TOAST ────────────────────────────────────────────── -->
+        <Border x:Name="Toast" CornerRadius="18" Background="#F01C1C21"
+                BorderBrush="{StaticResource PillBorder}" BorderThickness="1"
+                Padding="12,6" Margin="0,8,0,0" Visibility="Collapsed">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.45" Color="Black"/>
+            </Border.Effect>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="ToastText" VerticalAlignment="Center" FontSize="12.5"
+                           Foreground="{StaticResource TextPrimary}"/>
+                <StackPanel x:Name="ToastActions" Orientation="Horizontal" Margin="14,0,0,0"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</Window>

@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Build a .deb package for wpeek
+# Build a .deb package for frame
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 VERSION="${1:-1.1.0}"
-PKG="wpeek"
+PKG="frame"
 ARCH="all"
 BUILD_DIR="$SCRIPT_DIR/build/${PKG}_${VERSION}_${ARCH}"
 
@@ -12,10 +12,10 @@ echo "Building ${PKG} ${VERSION}..."
 
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/DEBIAN"
-mkdir -p "$BUILD_DIR/usr/lib/wpeek/wpeek"
+mkdir -p "$BUILD_DIR/usr/lib/frame/frame"
 mkdir -p "$BUILD_DIR/usr/bin"
 mkdir -p "$BUILD_DIR/usr/share/applications"
-mkdir -p "$BUILD_DIR/usr/share/doc/wpeek"
+mkdir -p "$BUILD_DIR/usr/share/doc/frame"
 mkdir -p "$BUILD_DIR/usr/share/icons/hicolor/scalable/apps"
 for size in 16 32 48 64 128 256 512; do
     mkdir -p "$BUILD_DIR/usr/share/icons/hicolor/${size}x${size}/apps"
@@ -42,11 +42,11 @@ Depends: python3 (>= 3.10),
  gstreamer1.0-plugins-bad,
  ffmpeg
 Recommends: libnotify-bin
-Installed-Size: $(du -sk "$SCRIPT_DIR/wpeek" | cut -f1)
-Homepage: https://github.com/cryan/wpeek
-Maintainer: cryan <cryan@localhost>
+Installed-Size: $(du -sk "$SCRIPT_DIR/frame" | cut -f1)
+Homepage: https://github.com/ProfessorCam/wpeek
+Maintainer: Cameron Ryan <cameronaryan@gmail.com>
 Description: Peek-like screen area recorder for GNOME Wayland
- wpeek is a screen area recorder for GNOME on Wayland. It records
+ Frame is a screen area recorder for GNOME on Wayland. It records
  your screen selection as GIF, WebM (VP9), or MP4 (H.264).
  .
  Features:
@@ -57,7 +57,7 @@ Description: Peek-like screen area recorder for GNOME Wayland
   - Multi-monitor support
   - Configurable countdown delay
  .
- wpeek uses the Mutter ScreenCast D-Bus API and PipeWire for
+ Frame uses the Mutter ScreenCast D-Bus API and PipeWire for
  capture, with a GTK4/libadwaita interface.
 EOF
 
@@ -88,29 +88,41 @@ POSTRM
 chmod 755 "$BUILD_DIR/DEBIAN/postrm"
 
 # ── Python package ────────────────────────────────────────────────
-cp "$SCRIPT_DIR/wpeek/__init__.py"  "$BUILD_DIR/usr/lib/wpeek/wpeek/"
-cp "$SCRIPT_DIR/wpeek/__main__.py"  "$BUILD_DIR/usr/lib/wpeek/wpeek/"
-cp "$SCRIPT_DIR/wpeek/app.py"       "$BUILD_DIR/usr/lib/wpeek/wpeek/"
-cp "$SCRIPT_DIR/wpeek/recorder.py"  "$BUILD_DIR/usr/lib/wpeek/wpeek/"
+cp "$SCRIPT_DIR/frame/__init__.py"      "$BUILD_DIR/usr/lib/frame/frame/"
+cp "$SCRIPT_DIR/frame/__main__.py"      "$BUILD_DIR/usr/lib/frame/frame/"
+cp "$SCRIPT_DIR/frame/app.py"           "$BUILD_DIR/usr/lib/frame/frame/"
+cp "$SCRIPT_DIR/frame/recorder.py"      "$BUILD_DIR/usr/lib/frame/frame/"
+cp "$SCRIPT_DIR/frame/config.py"        "$BUILD_DIR/usr/lib/frame/frame/"
+cp "$SCRIPT_DIR/frame/overlay.py"       "$BUILD_DIR/usr/lib/frame/frame/"
+cp "$SCRIPT_DIR/frame/dbus_control.py"  "$BUILD_DIR/usr/lib/frame/frame/"
+cp "$SCRIPT_DIR/frame/globalshortcuts.py" "$BUILD_DIR/usr/lib/frame/frame/"
+
+# ── GNOME Shell extension (top-bar Pause/Stop controls) ───────────
+EXT_UUID="frame@professorcam.github.io"
+EXT_DEST="$BUILD_DIR/usr/share/gnome-shell/extensions/$EXT_UUID"
+mkdir -p "$EXT_DEST"
+cp "$SCRIPT_DIR/gnome-shell-extension/$EXT_UUID/metadata.json"  "$EXT_DEST/"
+cp "$SCRIPT_DIR/gnome-shell-extension/$EXT_UUID/extension.js"   "$EXT_DEST/"
+cp "$SCRIPT_DIR/gnome-shell-extension/$EXT_UUID/stylesheet.css" "$EXT_DEST/"
 
 # ── Launcher script ──────────────────────────────────────────────
-cat > "$BUILD_DIR/usr/bin/wpeek" << 'LAUNCHER'
+cat > "$BUILD_DIR/usr/bin/frame" << 'LAUNCHER'
 #!/usr/bin/python3
-"""Launch wpeek."""
+"""Launch frame."""
 import sys
-sys.path.insert(0, '/usr/lib/wpeek')
-from wpeek.__main__ import main
+sys.path.insert(0, '/usr/lib/frame')
+from frame.__main__ import main
 sys.exit(main())
 LAUNCHER
-chmod 755 "$BUILD_DIR/usr/bin/wpeek"
+chmod 755 "$BUILD_DIR/usr/bin/frame"
 
 # ── Desktop file ─────────────────────────────────────────────────
-cat > "$BUILD_DIR/usr/share/applications/com.github.wpeek.desktop" << 'DESKTOP'
+cat > "$BUILD_DIR/usr/share/applications/com.github.frame.desktop" << 'DESKTOP'
 [Desktop Entry]
-Name=wpeek
+Name=Frame
 Comment=Screen area recorder for GNOME Wayland
-Exec=wpeek
-Icon=wpeek
+Exec=frame
+Icon=frame
 Terminal=false
 Type=Application
 Categories=AudioVideo;Video;Recorder;
@@ -120,21 +132,21 @@ X-GNOME-Introspect=true
 DESKTOP
 
 # ── Icons ─────────────────────────────────────────────────────────
-cp "$SCRIPT_DIR/wpeek.svg" "$BUILD_DIR/usr/share/icons/hicolor/scalable/apps/wpeek.svg"
+cp "$SCRIPT_DIR/frame.svg" "$BUILD_DIR/usr/share/icons/hicolor/scalable/apps/frame.svg"
 for size in 16 32 48 64 128 256 512; do
-    cp "$SCRIPT_DIR/icons/wpeek-${size}.png" \
-       "$BUILD_DIR/usr/share/icons/hicolor/${size}x${size}/apps/wpeek.png"
+    cp "$SCRIPT_DIR/icons/frame-${size}.png" \
+       "$BUILD_DIR/usr/share/icons/hicolor/${size}x${size}/apps/frame.png"
 done
-cp "$SCRIPT_DIR/icons/wpeek-48.png" "$BUILD_DIR/usr/share/pixmaps/wpeek.png"
+cp "$SCRIPT_DIR/icons/frame-48.png" "$BUILD_DIR/usr/share/pixmaps/frame.png"
 
 # ── Copyright ─────────────────────────────────────────────────────
-cat > "$BUILD_DIR/usr/share/doc/wpeek/copyright" << 'COPYRIGHT'
+cat > "$BUILD_DIR/usr/share/doc/frame/copyright" << 'COPYRIGHT'
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: wpeek
+Upstream-Name: Frame
 License: MIT
 
 Files: *
-Copyright: 2026 cryan
+Copyright: 2026 Cameron Ryan
 License: MIT
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -163,4 +175,4 @@ echo "Install with:"
 echo "  sudo apt install ./${PKG}_${VERSION}_${ARCH}.deb"
 echo ""
 echo "Uninstall with:"
-echo "  sudo apt remove wpeek"
+echo "  sudo apt remove frame"

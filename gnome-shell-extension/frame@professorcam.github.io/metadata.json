@@ -1,0 +1,7 @@
+{
+  "uuid": "frame@professorcam.github.io",
+  "name": "Frame recorder controls",
+  "description": "Adds a top-bar indicator with Pause/Resume and Stop while the Frame screen recorder is running, so you can control recording even when the floating pill is hidden behind another window. Talks to Frame over D-Bus and only appears while recording.",
+  "shell-version": ["45", "46", "47", "48", "49", "50", "51"],
+  "url": "https://github.com/ProfessorCam/wpeek"
+}
