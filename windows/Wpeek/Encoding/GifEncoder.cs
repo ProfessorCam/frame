@@ -13,17 +13,39 @@ namespace Wpeek.Encoding;
 public sealed class GifEncoder : IEncoder
 {
     private readonly string _path;
-    private readonly GifBitmapEncoder _gif = new();
     private int _fps = 30;
+    private long _bytes;
+
+    // GifBitmapEncoder is a DispatcherObject and is pinned to the thread that
+    // constructs it. Begin/AddFrame/Finish all run on the capture thread, so it
+    // must be built in Begin() — a field initializer would run on the UI thread
+    // and every AddFrame would throw "calling thread cannot access this object".
+    private GifBitmapEncoder? _gif;
+
+    // Every frame is held in memory until Finish(). Stop with a clear message
+    // rather than dying of OutOfMemory partway through a long capture.
+    private const long MaxBytes = 1_200_000_000;
 
     public bool NeedsConvertNotice => true;
 
     public GifEncoder(string path) => _path = path;
 
-    public void Begin(int width, int height, int fps) => _fps = Math.Clamp(fps, 5, 50);
+    public void Begin(int width, int height, int fps)
+    {
+        _fps = Math.Clamp(fps, 5, 50);
+        _bytes = 0;
+        _gif = new GifBitmapEncoder();
+    }
 
     public void AddFrame(Frame frame)
     {
+        if (_gif == null) return;
+
+        _bytes += (long)frame.Width * frame.Height * 4;
+        if (_bytes > MaxBytes)
+            throw new InvalidOperationException(
+                "Recording is too long for GIF (out of memory budget). Record in MP4 for long clips.");
+
         var src = BitmapSource.Create(
             frame.Width, frame.Height, 96, 96, PixelFormats.Bgra32, null,
             frame.Bgra, frame.Width * 4);
@@ -33,6 +55,9 @@ public sealed class GifEncoder : IEncoder
 
     public string Finish()
     {
+        if (_gif == null || _gif.Frames.Count == 0)
+            throw new InvalidOperationException("Nothing was captured.");
+
         using var ms = new MemoryStream();
         _gif.Save(ms);
         byte[] patched = GifPatcher.AddLoopAndDelays(ms.ToArray(), DelayCentiseconds(_fps));
@@ -41,7 +66,7 @@ public sealed class GifEncoder : IEncoder
         return _path;
     }
 
-    public void Abort() { /* nothing persisted until Finish */ }
+    public void Abort() { _gif = null; /* nothing persisted until Finish */ }
 
     // GIF delay granularity is 1/100 s; clamp so it stays >= 1.
     private static int DelayCentiseconds(int fps) => Math.Max(1, (int)Math.Round(100.0 / fps));

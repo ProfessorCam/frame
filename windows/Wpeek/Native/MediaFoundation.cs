@@ -49,9 +49,10 @@ internal static class MF
         => t.SetUINT64(ref key, ((ulong)(uint)a << 32) | (uint)b);
 
     // ── COM interfaces ────────────────────────────────────────────────
-    // IMFAttributes must declare ALL 30 methods in exact vtable order, because
-    // IMFMediaType and IMFSample inherit it — any missing slot misaligns the
-    // derived interfaces' methods. Unused methods are single-slot placeholders.
+    // All 30 IMFAttributes methods are declared in exact vtable order; unused ones
+    // are single-slot placeholders. IMFMediaType adds no methods of its own, so
+    // inheriting here is safe — its attribute calls dispatch through a QI for
+    // IMFAttributes. An interface that adds methods must NOT inherit (see IMFSample).
     [ComImport, Guid("2cd2d921-c447-44a7-a13c-4adabfc247e3"),
      InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IMFAttributes
@@ -103,21 +104,59 @@ internal static class MF
         [PreserveSig] int GetMaxLength(out int pcbMaxLength);
     }
 
+    // IMFSample derives from IMFAttributes in COM, but a managed `: IMFAttributes`
+    // does NOT reserve the 30 inherited vtable slots — the CLR numbers slots from the
+    // methods declared directly on a ComImport interface. Inheriting it put
+    // SetSampleTime on IMFAttributes::Compare's slot and access-violated. The base
+    // methods must therefore be restated here, in exact vtable order, ahead of
+    // IMFSample's own. Unused slots are placeholders; only the order matters.
     [ComImport, Guid("c40a00f2-b93a-4d80-ae8c-5a1c634f58e4"),
      InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    public interface IMFSample : IMFAttributes
+    public interface IMFSample
     {
-        // Note: IMFSample extends IMFAttributes; only the methods we call follow.
-        [PreserveSig] int GetSampleFlags(out uint pdwSampleFlags);
-        [PreserveSig] int SetSampleFlags(uint dwSampleFlags);
-        [PreserveSig] int GetSampleTime(out long phnsSampleTime);
-        [PreserveSig] int SetSampleTime(long hnsSampleTime);
-        [PreserveSig] int GetSampleDuration(out long phnsSampleDuration);
-        [PreserveSig] int SetSampleDuration(long hnsSampleDuration);
-        [PreserveSig] int GetBufferCount(out int pdwBufferCount);
-        [PreserveSig] int GetBufferByIndex(int dwIndex, out IMFMediaBuffer ppBuffer);
-        [PreserveSig] int ConvertToContiguousBuffer(out IMFMediaBuffer ppBuffer);
-        [PreserveSig] int AddBuffer(IMFMediaBuffer pBuffer);
+        // --- IMFAttributes (slots 1-30) ---
+        [PreserveSig] int GetItem(ref Guid key, IntPtr value);          // 1
+        [PreserveSig] int GetItemType(ref Guid key, out int pType);     // 2
+        [PreserveSig] int CompareItem();                                // 3
+        [PreserveSig] int Compare();                                    // 4
+        [PreserveSig] int GetUINT32(ref Guid key, out uint value);      // 5
+        [PreserveSig] int GetUINT64(ref Guid key, out ulong value);     // 6
+        [PreserveSig] int GetDouble();                                  // 7
+        [PreserveSig] int GetGuid(ref Guid key, out Guid value);        // 8
+        [PreserveSig] int GetStringLength();                            // 9
+        [PreserveSig] int GetString();                                  // 10
+        [PreserveSig] int GetAllocatedString();                         // 11
+        [PreserveSig] int GetBlobSize();                                // 12
+        [PreserveSig] int GetBlob();                                    // 13
+        [PreserveSig] int GetAllocatedBlob();                           // 14
+        [PreserveSig] int GetUnknown();                                 // 15
+        [PreserveSig] int SetItem();                                    // 16
+        [PreserveSig] int DeleteItem();                                 // 17
+        [PreserveSig] int DeleteAllItems();                             // 18
+        [PreserveSig] int SetUINT32(ref Guid key, uint value);          // 19
+        [PreserveSig] int SetUINT64(ref Guid key, ulong value);         // 20
+        [PreserveSig] int SetDouble(ref Guid key, double value);        // 21
+        [PreserveSig] int SetGuid(ref Guid key, ref Guid value);        // 22
+        [PreserveSig] int SetString();                                  // 23
+        [PreserveSig] int SetBlob();                                    // 24
+        [PreserveSig] int SetUnknown();                                 // 25
+        [PreserveSig] int LockStore();                                  // 26
+        [PreserveSig] int UnlockStore();                                // 27
+        [PreserveSig] int GetCount();                                   // 28
+        [PreserveSig] int GetItemByIndex();                             // 29
+        [PreserveSig] int CopyAllItems();                               // 30
+
+        // --- IMFSample (slots 31-40) ---
+        [PreserveSig] int GetSampleFlags(out uint pdwSampleFlags);      // 31
+        [PreserveSig] int SetSampleFlags(uint dwSampleFlags);           // 32
+        [PreserveSig] int GetSampleTime(out long phnsSampleTime);       // 33
+        [PreserveSig] int SetSampleTime(long hnsSampleTime);            // 34
+        [PreserveSig] int GetSampleDuration(out long phnsSampleDuration); // 35
+        [PreserveSig] int SetSampleDuration(long hnsSampleDuration);    // 36
+        [PreserveSig] int GetBufferCount(out int pdwBufferCount);       // 37
+        [PreserveSig] int GetBufferByIndex(int dwIndex, out IMFMediaBuffer ppBuffer); // 38
+        [PreserveSig] int ConvertToContiguousBuffer(out IMFMediaBuffer ppBuffer);     // 39
+        [PreserveSig] int AddBuffer(IMFMediaBuffer pBuffer);            // 40
     }
 
     [ComImport, Guid("3137f1cd-fe5e-4805-a5d8-fb477448cb3d"),

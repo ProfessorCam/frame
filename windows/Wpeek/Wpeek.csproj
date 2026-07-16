@@ -13,8 +13,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>frame</AssemblyName>
     <RootNamespace>Wpeek</RootNamespace>
-    <Version>2.0.0</Version>
+    <Version>2.2.0</Version>
     <Product>Frame</Product>
+
+    <!-- Embeds frame.ico as the exe's Win32 icon (Explorer / file listing). -->
+    <ApplicationIcon>frame.ico</ApplicationIcon>
 
     <!-- Single self-contained .exe with no runtime install required -->
     <SelfContained>true</SelfContained>
@@ -23,5 +26,10 @@
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <DebugType>embedded</DebugType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Same file, addressable as a pack:// resource for Window.Icon (taskbar / alt-tab). -->
+    <Resource Include="frame.ico" />
+  </ItemGroup>
 
 </Project>

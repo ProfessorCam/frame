@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>Wpeek</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Compile the real production sources, not copies. The default glob only
+         reaches Program.cs, since these live outside the project directory. -->
+    <Compile Include="../Wpeek/Capture/Frame.cs"          Link="src/Frame.cs" />
+    <Compile Include="../Wpeek/Encoding/IEncoder.cs"      Link="src/IEncoder.cs" />
+    <Compile Include="../Wpeek/Encoding/GifEncoder.cs"    Link="src/GifEncoder.cs" />
+    <Compile Include="../Wpeek/Encoding/Mp4Encoder.cs"    Link="src/Mp4Encoder.cs" />
+    <Compile Include="../Wpeek/Native/MediaFoundation.cs" Link="src/MediaFoundation.cs" />
+  </ItemGroup>
+</Project>

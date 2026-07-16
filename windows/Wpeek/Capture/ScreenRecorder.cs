@@ -56,6 +56,9 @@ public sealed class ScreenRecorder
         IntPtr screenDC = IntPtr.Zero, memDC = IntPtr.Zero, dib = IntPtr.Zero, oldObj = IntPtr.Zero;
         IntPtr bits = IntPtr.Zero;
 
+        string? donePath = null;
+        string? error = null;
+
         try
         {
             screenDC = NativeMethods.GetDC(NativeMethods.GetDesktopWindow());
@@ -77,7 +80,7 @@ public sealed class ScreenRecorder
             oldObj = NativeMethods.SelectObject(memDC, dib);
 
             _encoder.Begin(w, h, _fps);
-            Started?.Invoke();
+            Notify(Started);
 
             var sw = Stopwatch.StartNew();
             long frameTicks = TimeSpan.TicksPerSecond / _fps;
@@ -117,14 +120,13 @@ public sealed class ScreenRecorder
             }
 
             // Finalize (may take a moment for GIF palette work)
-            if (_encoder.NeedsConvertNotice) Converting?.Invoke();
-            string path = _encoder.Finish();
-            Finished?.Invoke(path);
+            if (_encoder.NeedsConvertNotice) Notify(Converting);
+            donePath = _encoder.Finish();
         }
         catch (Exception ex)
         {
             try { _encoder.Abort(); } catch { /* ignore */ }
-            Failed?.Invoke(ex.Message);
+            error = ex.Message;
         }
         finally
         {
@@ -134,6 +136,22 @@ public sealed class ScreenRecorder
             if (screenDC != IntPtr.Zero)
                 NativeMethods.ReleaseDC(NativeMethods.GetDesktopWindow(), screenDC);
         }
+
+        // Report outside the try/catch. Raising Failed from inside the catch let a
+        // UI exception escape this background thread and take the process down; an
+        // exception in Finished would also have been misreported as a capture failure.
+        try
+        {
+            if (error != null) Failed?.Invoke(error);
+            else Finished?.Invoke(donePath!);
+        }
+        catch { /* a broken UI callback must never kill the recorder */ }
+    }
+
+    // Marshalling to the UI thread can throw; capture must not die because the UI did.
+    private static void Notify(Action? handler)
+    {
+        try { handler?.Invoke(); } catch { /* ignore */ }
     }
 
     private void DrawCursor(IntPtr memDC)

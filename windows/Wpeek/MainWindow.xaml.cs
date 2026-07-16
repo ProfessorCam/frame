@@ -221,9 +221,9 @@ public partial class MainWindow : Window
         ToastText.Text = text;
         ToastText.Foreground = kind switch
         {
-            ToastKind.Good => (Brush)FindResource("Good"),
-            ToastKind.Error => (Brush)FindResource("Accent"),
-            _ => (Brush)FindResource("TextPrimary"),
+            ToastKind.Good => BrushRes("Good", Colors.LimeGreen),
+            ToastKind.Error => BrushRes("Accent", Colors.OrangeRed),
+            _ => BrushRes("TextPrimary", Colors.White),
         };
         ToastActions.Children.Clear();
         if (withActions)
@@ -236,6 +236,11 @@ public partial class MainWindow : Window
     }
 
     private void HideToast() => Toast.Visibility = Visibility.Collapsed;
+
+    // This runs on the failure path, so it must never throw: fall back to a literal
+    // colour if the key is missing or shadowed by a non-Brush resource.
+    private Brush BrushRes(string key, Color fallback)
+        => TryFindResource(key) as Brush ?? new SolidColorBrush(fallback);
 
     private Button MakeAction(string label, Action handler)
     {
