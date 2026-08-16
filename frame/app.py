@@ -509,7 +509,6 @@ class FrameWindow(Gtk.ApplicationWindow):
         self._delay_drop = Gtk.DropDown.new_from_strings(
             ['No delay', '3 s', '5 s', '10 s'])
         self._delay_drop.add_css_class('pill-flat')
-        self._delay_drop.set_tooltip_text('Countdown before recording')
         self._delay_drop.connect('notify::selected', self._on_delay)
         self._idle.append(self._delay_drop)
 
@@ -519,7 +518,6 @@ class FrameWindow(Gtk.ApplicationWindow):
                       for c, _x, _y, w, h in self._monitors]
             self._mon_drop = Gtk.DropDown.new_from_strings(labels)
             self._mon_drop.add_css_class('pill-flat')
-            self._mon_drop.set_tooltip_text('Monitor to capture')
             self._mon_drop.connect('notify::selected', self._on_monitor)
             self._idle.append(self._mon_drop)
         else:
@@ -541,14 +539,18 @@ class FrameWindow(Gtk.ApplicationWindow):
         rec_content.append(dot)
         rec_content.append(Gtk.Label(label='Record'))
         self._rec_btn.set_child(rec_content)
-        self._rec_btn.set_tooltip_text('Record  (Ctrl+R)')
         self._rec_btn.connect('clicked', lambda _: self._on_record())
         self._idle.append(self._rec_btn)
+
+        # Minimize button
+        minimize = Gtk.Button(icon_name='window-minimize-symbolic')
+        minimize.add_css_class('pill-flat')
+        minimize.connect('clicked', lambda _: self.minimize())
+        self._idle.append(minimize)
 
         # Close button
         close = Gtk.Button(icon_name='window-close-symbolic')
         close.add_css_class('close-btn')
-        close.set_tooltip_text('Quit  (Esc)')
         close.connect('clicked', lambda _: self.close())
         self._idle.append(close)
 
@@ -575,13 +577,11 @@ class FrameWindow(Gtk.ApplicationWindow):
 
         self._pause_btn = Gtk.Button(label='Pause')
         self._pause_btn.add_css_class('stop-btn')
-        self._pause_btn.set_tooltip_text('Pause / Resume  (Space)')
         self._pause_btn.connect('clicked', lambda _: self._on_pause())
         self._rec_cluster.append(self._pause_btn)
 
         self._stop_btn = Gtk.Button(label='Stop')
         self._stop_btn.add_css_class('record-btn')
-        self._stop_btn.set_tooltip_text('Stop  (Ctrl+R / Esc)')
         self._stop_btn.connect('clicked', lambda _: self._on_stop())
         self._rec_cluster.append(self._stop_btn)
 
@@ -605,7 +605,6 @@ class FrameWindow(Gtk.ApplicationWindow):
     def _build_settings_button(self):
         btn = Gtk.MenuButton(icon_name='emblem-system-symbolic')
         btn.add_css_class('pill-flat')
-        btn.set_tooltip_text('Settings')
 
         pop = Gtk.Popover()
         pop.add_css_class('settings-pop')
@@ -907,10 +906,17 @@ class FrameWindow(Gtk.ApplicationWindow):
         self._timer_id = GLib.timeout_add(1000, self._tick_timer)
         self._hide_toast()
         self._emit_state()
+        # Wayland has no per-window screencast exclusion, so the only way to
+        # keep the pill itself out of the recording is to hide it while the
+        # capture is actually running. Pause/stop remain reachable via the
+        # GNOME top-bar extension and global hotkeys (dbus_control.py /
+        # globalshortcuts.py) while the window is hidden.
+        self.set_visible(False)
 
     def _cb_converting(self):
         self._recording = False
         self._teardown()
+        self.present()
         self._rec_btn.set_sensitive(False)
         self._toast_msg('Converting to GIF…')
         self._emit_state()
@@ -918,6 +924,7 @@ class FrameWindow(Gtk.ApplicationWindow):
     def _cb_stopped(self, path):
         self._recording = False
         self._teardown()
+        self.present()
         self._rec_btn.set_sensitive(True)
         self._last_saved = path
         fname = os.path.basename(path)
@@ -938,6 +945,7 @@ class FrameWindow(Gtk.ApplicationWindow):
     def _cb_error(self, msg):
         self._recording = False
         self._teardown()
+        self.present()
         self._rec_btn.set_sensitive(True)
         self._toast_msg(f'Error: {msg}', 'error')
         self._emit_state()

@@ -44,15 +44,25 @@ This tool was written to be self-contained and correct, but must be **built and
 smoke-tested on Windows 11** (there is no Windows host in the authoring
 environment). When you first build, verify in this order:
 
-1. **App + pill UI** launch, drag, format/delay/settings persistence.
+1. **App + pill UI** launch, drag, minimize/restore, format/delay/settings persistence.
 2. **Region selector** rubber-band + `W×H` label; single-monitor first.
-3. **GIF** recording (the primary path) — open the result; confirm it loops and plays
+3. **Capture exclusion** — with the pill positioned over the selected region, confirm
+   it does not appear in a recording, and confirm it also doesn't appear in an
+   unrelated screenshot/screen-share tool (`SetWindowDisplayAffinity` in
+   `MainWindow.xaml.cs` `OnSourceInitialized`). If it fails silently pre-19041, the
+   pill will simply appear in captures as normal — not a hard failure.
+4. **GIF** recording (the primary path) — open the result; confirm it loops and plays
    at roughly the chosen frame rate.
-4. **MP4** recording — the Media Foundation Sink Writer path is the most
+5. **MP4** recording — the Media Foundation Sink Writer path is the most
    interop-heavy piece. If the video is vertically flipped, flip the sign of
    `MF_MT_DEFAULT_STRIDE` in `Encoding/Mp4Encoder.cs`. If a frame is captured but
    MP4 fails, GIF remains a working fallback.
-5. **Multi-monitor / mixed-DPI**: region selection assumes a uniform DPI scale; on
+6. **Resolution cap** — record a large/near-fullscreen region in GIF at each resolution setting.
+   Native on a large region will hit `GifEncoder`'s in-memory budget within roughly 5-10s (this
+   is expected — that's what the resolution cap is for); 480p/720p/1080p on the same region
+   should run substantially longer without erroring. Confirmed on-device: a ~1490×990 region
+   failed at 5.7s at Native and ran a full 15s cleanly at 480p.
+7. **Multi-monitor / mixed-DPI**: region selection assumes a uniform DPI scale; on
    mixed-DPI setups the selected rectangle may be offset — capture on a single
    display is the reliable path for v1.
 

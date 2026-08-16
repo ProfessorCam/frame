@@ -26,6 +26,17 @@ internal static class NativeMethods
     public static extern bool BitBlt(IntPtr hdcDest, int xDest, int yDest, int w, int h,
                                      IntPtr hdcSrc, int xSrc, int ySrc, int rop);
 
+    // Scaling blit, used when a capture resolution cap is in effect (downscales at
+    // capture time rather than after, so memory/CPU cost drops with it too).
+    [DllImport("gdi32.dll")]
+    public static extern bool StretchBlt(IntPtr hdcDest, int xDest, int yDest, int wDest, int hDest,
+                                         IntPtr hdcSrc, int xSrc, int ySrc, int wSrc, int hSrc, int rop);
+
+    [DllImport("gdi32.dll")]
+    public static extern int SetStretchBltMode(IntPtr hdc, int mode);
+
+    public const int COLORONCOLOR = 3;   // fast, no halftone dithering overhead per frame
+
     // ── Cursor ────────────────────────────────────────────────────────
     [StructLayout(LayoutKind.Sequential)]
     public struct POINT { public int X; public int Y; }
@@ -41,6 +52,8 @@ internal static class NativeMethods
 
     public const int CURSOR_SHOWING = 0x00000001;
     public const int DI_NORMAL = 0x0003;
+    public const int SM_CXCURSOR = 13;
+    public const int SM_CYCURSOR = 14;
 
     [DllImport("user32.dll")] public static extern bool GetCursorInfo(ref CURSORINFO pci);
 
@@ -99,4 +112,31 @@ internal static class NativeMethods
     public static readonly IntPtr HWND_TOPMOST = new(-1);
     public const uint SWP_SHOWWINDOW = 0x0040;
     public const uint SWP_NOACTIVATE = 0x0010;
+
+    // ── System memory (sizes the GIF in-memory frame budget to the machine) ───
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MEMORYSTATUSEX
+    {
+        public uint dwLength;
+        public uint dwMemoryLoad;
+        public ulong ullTotalPhys;
+        public ulong ullAvailPhys;
+        public ulong ullTotalPageFile;
+        public ulong ullAvailPageFile;
+        public ulong ullTotalVirtual;
+        public ulong ullAvailVirtual;
+        public ulong ullAvailExtendedVirtual;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GlobalMemoryStatusEx(ref MEMORYSTATUSEX lpBuffer);
+
+    // ── Capture exclusion (keep the pill/toast out of our own and other apps'
+    // screen recordings/screenshots — Windows 10 2004+ / build 19041+) ───────
+    [DllImport("user32.dll")]
+    public static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+
+    public const uint WDA_NONE = 0x00000000;
+    public const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
 }

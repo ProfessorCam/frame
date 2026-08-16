@@ -13,7 +13,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>frame</AssemblyName>
     <RootNamespace>Wpeek</RootNamespace>
-    <Version>2.2.0</Version>
+    <Version>2.3.0</Version>
     <Product>Frame</Product>
 
     <!-- Embeds frame.ico as the exe's Win32 icon (Explorer / file listing). -->

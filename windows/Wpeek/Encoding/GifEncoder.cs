@@ -1,7 +1,9 @@
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Wpeek.Capture;
+using Wpeek.Native;
 
 namespace Wpeek.Encoding;
 
@@ -23,8 +25,19 @@ public sealed class GifEncoder : IEncoder
     private GifBitmapEncoder? _gif;
 
     // Every frame is held in memory until Finish(). Stop with a clear message
-    // rather than dying of OutOfMemory partway through a long capture.
-    private const long MaxBytes = 1_200_000_000;
+    // rather than dying of OutOfMemory partway through a long capture. The budget
+    // is sized to the machine (see ComputeBudget) instead of a fixed constant, so
+    // a well-provisioned PC can record much longer than a memory-constrained one.
+    private long _maxBytes;
+
+    // Never claim less than this (a few seconds even on a very tight machine) or
+    // more than this (avoid multi-gigabyte LOH pressure/GC pauses regardless of
+    // how much RAM is actually free).
+    private const long MinBudget = 500_000_000;
+    private const long MaxBudget = 8_000_000_000;
+    // Fraction of *currently free* physical RAM this one recording may claim —
+    // conservative because the user's machine keeps running everything else too.
+    private const double AvailFraction = 0.33;
 
     public bool NeedsConvertNotice => true;
 
@@ -34,6 +47,7 @@ public sealed class GifEncoder : IEncoder
     {
         _fps = Math.Clamp(fps, 5, 50);
         _bytes = 0;
+        _maxBytes = ComputeBudget();
         _gif = new GifBitmapEncoder();
     }
 
@@ -42,9 +56,10 @@ public sealed class GifEncoder : IEncoder
         if (_gif == null) return;
 
         _bytes += (long)frame.Width * frame.Height * 4;
-        if (_bytes > MaxBytes)
+        if (_bytes > _maxBytes)
             throw new InvalidOperationException(
-                "Recording is too long for GIF (out of memory budget). Record in MP4 for long clips.");
+                $"Recording is too long for GIF (out of memory budget, ~{_maxBytes / 1_000_000} MB " +
+                "on this machine). Lower the resolution in ⚙ Settings, or record in MP4 for long clips.");
 
         var src = BitmapSource.Create(
             frame.Width, frame.Height, 96, 96, PixelFormats.Bgra32, null,
@@ -70,6 +85,27 @@ public sealed class GifEncoder : IEncoder
 
     // GIF delay granularity is 1/100 s; clamp so it stays >= 1.
     private static int DelayCentiseconds(int fps) => Math.Max(1, (int)Math.Round(100.0 / fps));
+
+    // Reads currently-available physical RAM and takes a conservative slice of it.
+    // Queried fresh per recording (not cached at startup) since free memory shifts
+    // as other apps run. Falls back to the floor if the query itself fails.
+    private static long ComputeBudget()
+    {
+        try
+        {
+            var status = new NativeMethods.MEMORYSTATUSEX
+            {
+                dwLength = (uint)Marshal.SizeOf<NativeMethods.MEMORYSTATUSEX>(),
+            };
+            if (NativeMethods.GlobalMemoryStatusEx(ref status))
+            {
+                long budget = (long)(status.ullAvailPhys * AvailFraction);
+                return Math.Clamp(budget, MinBudget, MaxBudget);
+            }
+        }
+        catch { /* fall through */ }
+        return MinBudget;
+    }
 }
 
 /// <summary>

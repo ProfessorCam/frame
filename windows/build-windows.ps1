@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Build frame for Windows as a single, self-contained .exe (no runtime install).
 

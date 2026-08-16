@@ -4,10 +4,12 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using Wpeek.Capture;
 using Wpeek.Encoding;
+using Wpeek.Native;
 
 namespace Wpeek;
 
@@ -22,6 +24,7 @@ public partial class MainWindow : Window
     private Popup? _settingsPopup;
     private CheckBox? _cursorCheck;
     private ComboBox? _fpsBox;
+    private ComboBox? _resBox;
 
     public MainWindow()
     {
@@ -34,6 +37,19 @@ public partial class MainWindow : Window
             if (e.Key == Key.Escape) OnEscape();
             else if (e.Key == Key.Space && _recorder != null) TogglePause();
         };
+    }
+
+    // Keep the pill/toast out of screen captures entirely (ours and anyone
+    // else's — screenshots, recorders, screen-share) rather than just hiding
+    // it during our own recording, so it never has to disappear from the
+    // user's own screen. The window is still visible locally; only capture
+    // APIs treat it as excluded. Requires Windows 10 2004+ (build 19041+),
+    // which matches this app's minimum target.
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+        var hwnd = new WindowInteropHelper(this).Handle;
+        NativeMethods.SetWindowDisplayAffinity(hwnd, NativeMethods.WDA_EXCLUDEFROMCAPTURE);
     }
 
     // ── Settings restore / persistence ────────────────────────────────
@@ -57,10 +73,26 @@ public partial class MainWindow : Window
             if (_fpsBox.SelectedItem is ComboBoxItem it && it.Tag is int f) { _cfg.Framerate = f; _cfg.Save(); }
         };
 
+        // Caps the captured/encoded size (downscaled at capture time, see
+        // ScreenRecorder's maxHeight). Lower resolutions use proportionally less
+        // memory per frame, which is what actually determines how long a GIF
+        // recording can run before GifEncoder's in-memory budget is hit — a large
+        // region at native resolution can exhaust it in well under 10 seconds.
+        _resBox = new ComboBox { Width = 90, Margin = new Thickness(0, 6, 0, 0) };
+        foreach (var (label, h) in new (string, int)[] { ("Native", 0), ("1080p", 1080), ("720p", 720), ("480p", 480) })
+            _resBox.Items.Add(new ComboBoxItem { Content = label, Tag = h });
+        _resBox.SelectedIndex = _cfg.MaxHeight switch { 1080 => 1, 720 => 2, 480 => 3, _ => 0 };
+        _resBox.SelectionChanged += (_, _) =>
+        {
+            if (_resBox.SelectedItem is ComboBoxItem it && it.Tag is int h) { _cfg.MaxHeight = h; _cfg.Save(); }
+        };
+
         var panel = new StackPanel { Margin = new Thickness(12) };
         panel.Children.Add(_cursorCheck);
         panel.Children.Add(new TextBlock { Text = "Frame rate", Foreground = Brushes.White, Margin = new Thickness(0, 10, 0, 0) });
         panel.Children.Add(_fpsBox);
+        panel.Children.Add(new TextBlock { Text = "Resolution", Foreground = Brushes.White, Margin = new Thickness(0, 10, 0, 0) });
+        panel.Children.Add(_resBox);
 
         _settingsPopup = new Popup
         {
@@ -107,6 +139,8 @@ public partial class MainWindow : Window
         }
     }
 
+    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
     private void OnEscape()
@@ -144,7 +178,7 @@ public partial class MainWindow : Window
     {
         string path = OutputPath(_cfg.Format);
         IEncoder encoder = _cfg.Format == OutputFormat.Mp4 ? new Mp4Encoder(path) : new GifEncoder(path);
-        var rec = new ScreenRecorder(region, _cfg.Framerate, _cfg.Cursor, encoder);
+        var rec = new ScreenRecorder(region, _cfg.Framerate, _cfg.Cursor, encoder, _cfg.MaxHeight);
 
         rec.Started += () => Dispatcher.Invoke(() => EnterRecordingUi(region));
         rec.Converting += () => Dispatcher.Invoke(() => ShowToast("Converting…", ToastKind.Info));

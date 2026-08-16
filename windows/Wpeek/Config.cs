@@ -17,6 +17,7 @@ public sealed class Config
     public int Monitor { get; set; } = 0;      // index into screen list
     public bool Cursor { get; set; } = true;
     public int Framerate { get; set; } = 30;   // 15 | 24 | 30
+    public int MaxHeight { get; set; } = 0;    // 0 (native) | 480 | 720 | 1080 — caps captured/encoded size
 
     [JsonIgnore]
     public static string Dir =>
@@ -59,6 +60,7 @@ public sealed class Config
     {
         if (Delay is not (0 or 3 or 5 or 10)) Delay = 0;
         if (Framerate is not (15 or 24 or 30)) Framerate = 30;
+        if (MaxHeight is not (0 or 480 or 720 or 1080)) MaxHeight = 0;
         if (Monitor < 0) Monitor = 0;
     }
 }

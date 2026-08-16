@@ -4,3 +4,7 @@ __pycache__/
 *.pyo
 .claude/
 claude_notes.txt
+
+# .NET build output (windows/Wpeek)
+windows/Wpeek/bin/
+windows/Wpeek/obj/

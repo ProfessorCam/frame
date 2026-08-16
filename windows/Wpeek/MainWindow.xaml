@@ -160,6 +160,9 @@
                         </StackPanel>
                     </Button>
 
+                    <Button x:Name="MinimizeBtn" Style="{StaticResource Flat}" Margin="4,0,0,0"
+                            Content="&#x2212;" FontSize="12" Click="Minimize_Click"/>
+
                     <Button x:Name="CloseBtn" Style="{StaticResource Flat}" Margin="4,0,0,0"
                             Content="✕" FontSize="12" Click="Close_Click"/>
                 </StackPanel>

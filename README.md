@@ -35,15 +35,21 @@ Windows 11 and bundles the .NET runtime inside one `frame.exe`. See
 
 ## Features (both tools)
 
-- Wide, flat, translucent macOS-style **pill** — frameless and draggable
+- Wide, flat, translucent macOS-style **pill** — frameless, draggable, minimizable
 - Drag-to-select region with a live `W×H` readout — on Linux an overlay opens on
   **every monitor**, so you drag on whichever one you want
 - **GIF** with proper looping + frame delays, plus **MP4** (and **WebM** on Linux)
 - **Pause / Resume** mid-recording (`Space`), **Stop** (`Esc`)
+- The pill itself is never captured in your recording — on Windows it's excluded from
+  all screen capture (`SetWindowDisplayAffinity`); on Linux it hides for the duration
+  of the capture
 - Linux: **GNOME top-bar controls** and **global hotkeys** so you can pause/stop even
-  when the pill is hidden behind the window you're capturing (see below)
+  though the pill hides itself while a recording is in progress (see below)
 - On-screen **countdown** overlay for delayed starts (0 / 3 / 5 / 10 s)
-- Settings: **capture cursor** toggle and **frame rate**; version shown in the ⚙ menu
+- Settings: **capture cursor** toggle, **frame rate**, and **resolution** cap (Windows: Native /
+  1080p / 720p / 480p — lower resolutions use proportionally less memory per frame, so a GIF of
+  a large region can run much longer before hitting the encoder's in-memory budget); version
+  shown in the ⚙ menu
 - **Remembers** your last format, delay, cursor, and frame rate
 - After saving: **Open**, **Reveal in Files/Explorer**, **Copy path**
 - Files saved to `~/Videos` (Linux) / `%USERPROFILE%\Videos` (Windows)

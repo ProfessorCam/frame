@@ -17,6 +17,7 @@ public sealed class ScreenRecorder
     private readonly int _fps;
     private readonly bool _cursor;
     private readonly IEncoder _encoder;
+    private readonly int _outW, _outH;       // captured/encoded size, after the resolution cap
 
     private Thread? _thread;
     private volatile bool _running;
@@ -29,12 +30,32 @@ public sealed class ScreenRecorder
 
     public bool IsPaused => _paused;
 
-    public ScreenRecorder(Int32Rect region, int fps, bool cursor, IEncoder encoder)
+    /// <param name="maxHeight">
+    /// Cap the captured/encoded height to this many pixels, scaling the width to
+    /// match the selection's aspect ratio (0 = record at native selection size).
+    /// Downscaling happens in the capture blit itself, not as a post-process, so it
+    /// also cuts the per-frame memory and CPU cost proportionally — this is the
+    /// main lever for keeping a large-region GIF recording under GifEncoder's
+    /// in-memory budget (see MaxBytes in GifEncoder.cs).
+    /// </param>
+    public ScreenRecorder(Int32Rect region, int fps, bool cursor, IEncoder encoder, int maxHeight = 0)
     {
         _region = region;
         _fps = Math.Clamp(fps, 5, 60);
         _cursor = cursor;
         _encoder = encoder;
+
+        if (maxHeight > 0 && region.Height > maxHeight)
+        {
+            double scale = (double)maxHeight / region.Height;
+            _outH = maxHeight;
+            _outW = Math.Max(2, (int)Math.Round(region.Width * scale) & ~1);
+        }
+        else
+        {
+            _outW = region.Width;
+            _outH = region.Height;
+        }
     }
 
     public void Start()
@@ -52,7 +73,8 @@ public sealed class ScreenRecorder
 
     private void CaptureLoop()
     {
-        int w = _region.Width, h = _region.Height;
+        int w = _outW, h = _outH;
+        bool scaling = w != _region.Width || h != _region.Height;
         IntPtr screenDC = IntPtr.Zero, memDC = IntPtr.Zero, dib = IntPtr.Zero, oldObj = IntPtr.Zero;
         IntPtr bits = IntPtr.Zero;
 
@@ -63,6 +85,7 @@ public sealed class ScreenRecorder
         {
             screenDC = NativeMethods.GetDC(NativeMethods.GetDesktopWindow());
             memDC = NativeMethods.CreateCompatibleDC(screenDC);
+            if (scaling) NativeMethods.SetStretchBltMode(memDC, NativeMethods.COLORONCOLOR);
 
             var bmi = new NativeMethods.BITMAPINFOHEADER
             {
@@ -101,10 +124,20 @@ public sealed class ScreenRecorder
                 nextTick += frameTicks;
                 if (_paused) continue;
 
-                // Blit region → memory DIB
-                NativeMethods.BitBlt(memDC, 0, 0, w, h, screenDC, _region.X, _region.Y,
-                                     NativeMethods.SRCCOPY | NativeMethods.CAPTUREBLT);
-                if (_cursor) DrawCursor(memDC);
+                // Blit region → memory DIB, downscaling in the same pass if a
+                // resolution cap is in effect.
+                if (scaling)
+                {
+                    NativeMethods.StretchBlt(memDC, 0, 0, w, h, screenDC, _region.X, _region.Y,
+                                             _region.Width, _region.Height,
+                                             NativeMethods.SRCCOPY | NativeMethods.CAPTUREBLT);
+                }
+                else
+                {
+                    NativeMethods.BitBlt(memDC, 0, 0, w, h, screenDC, _region.X, _region.Y,
+                                         NativeMethods.SRCCOPY | NativeMethods.CAPTUREBLT);
+                }
+                if (_cursor) DrawCursor(memDC, w / (double)_region.Width, h / (double)_region.Height);
 
                 Marshal.Copy(bits, buffer, 0, buffer.Length);
 
@@ -154,7 +187,7 @@ public sealed class ScreenRecorder
         try { handler?.Invoke(); } catch { /* ignore */ }
     }
 
-    private void DrawCursor(IntPtr memDC)
+    private void DrawCursor(IntPtr memDC, double scaleX, double scaleY)
     {
         var ci = new NativeMethods.CURSORINFO { cbSize = Marshal.SizeOf<NativeMethods.CURSORINFO>() };
         if (!NativeMethods.GetCursorInfo(ref ci) || ci.flags != NativeMethods.CURSOR_SHOWING)
@@ -163,10 +196,13 @@ public sealed class ScreenRecorder
             return;
         try
         {
-            int x = ci.ptScreenPos.X - _region.X - ii.xHotspot;
-            int y = ci.ptScreenPos.Y - _region.Y - ii.yHotspot;
-            NativeMethods.DrawIconEx(memDC, x, y, ci.hCursor, 0, 0, 0,
-                                     IntPtr.Zero, NativeMethods.DI_NORMAL);
+            int cw = NativeMethods.GetSystemMetrics(NativeMethods.SM_CXCURSOR);
+            int ch = NativeMethods.GetSystemMetrics(NativeMethods.SM_CYCURSOR);
+            int x = (int)Math.Round((ci.ptScreenPos.X - _region.X) * scaleX - ii.xHotspot * scaleX);
+            int y = (int)Math.Round((ci.ptScreenPos.Y - _region.Y) * scaleY - ii.yHotspot * scaleY);
+            NativeMethods.DrawIconEx(memDC, x, y, ci.hCursor,
+                                     (int)Math.Round(cw * scaleX), (int)Math.Round(ch * scaleY),
+                                     0, IntPtr.Zero, NativeMethods.DI_NORMAL);
         }
         finally
         {
